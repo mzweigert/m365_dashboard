@@ -51,7 +51,7 @@ void setup() {
   display.begin(&Adafruit128x64, PIN_CS, PIN_DC, PIN_RST);
 #endif
   // Uncomment to invert the screen. Useful for better vision on the yellow / blue screens
-  // display.displayRemap(true);
+  display.displayRemap(true);
   display.setFont(m365);
   displayClear(0, true);
   display.setCursor(0, 0);
@@ -93,7 +93,7 @@ void loop() { //cycle time w\o data exchange ~8 us :)
   Message.Process();
   Message.ProcessBroadcast();
 
-  WDTcounts=0;
+  WDTcounts = 0;
 }
 
 void showBatt(int percent, bool blinkIt) {
@@ -106,11 +106,10 @@ void showBatt(int percent, bool blinkIt) {
       display.setCursor(5 + i * 5, 7);
       if (blinkIt && (millis() % 1000 < 500))
         display.print((char)0x83);
-        else
-        if (float(19) / 100 * percent > i)
-          display.print((char)0x82);
-          else
-          display.print((char)0x83);
+      else if (float(19) / 100 * percent > i)
+        display.print((char)0x82);
+      else
+        display.print((char)0x83);
     }
     display.setCursor(99, 7);
     display.print((char)0x84);
@@ -119,10 +118,10 @@ void showBatt(int percent, bool blinkIt) {
     display.print(percent);
     display.print('\%');
   } else
-  for (int i = 0; i < 34; i++) {
-    display.setCursor(i * 5, 7);
-    display.print(' ');
-  }
+    for (int i = 0; i < 34; i++) {
+      display.setCursor(i * 5, 7);
+      display.print(' ');
+    }
 }
 
 void fsBattInfo() {
@@ -196,7 +195,7 @@ void fsBattInfo() {
     display.print((const __FlashStringHelper *) l_v);
 
     display.setCursor(70, 2 + i);
-    display.print(i + 5); 
+    display.print(i + 5);
     display.print(": ");
     v = *ptr2 / 1000;
     display.print(v);
@@ -210,6 +209,218 @@ void fsBattInfo() {
     ptr++;
     ptr2++;
   }
+}
+
+void displayM365Settings() {
+  if ((throttleVal == FULL_PRESSED) && (oldThrottleVal != FULL_PRESSED) && (brakeVal == UNPRESSED) && (oldBrakeVal == UNPRESSED))                // brake min + throttle max = change menu value
+    switch (sMenuPos) {
+      case 0:
+        cfgCruise = !cfgCruise;
+        prepareCommand(cfgCruise ? CMD_CRUISE_ON : CMD_CRUISE_OFF);
+        EEPROM.put(6, cfgCruise);
+        break;
+      case 1:
+        cfgTailight = !cfgTailight;
+        prepareCommand(cfgTailight ? CMD_LED_ON : CMD_LED_OFF);
+        EEPROM.put(7, cfgTailight);
+        break;
+        break;
+      case 2:
+        switch (cfgKERS) {
+          case 0:
+            cfgKERS = 1;
+            prepareCommand(CMD_MEDIUM);
+            break;
+          case 1:
+            cfgKERS = 2;
+            prepareCommand(CMD_STRONG);
+            break;
+          default:
+            cfgKERS = 0;
+            prepareCommand(CMD_WEAK);
+        }
+        EEPROM.put(8, cfgKERS);
+      case 3:
+        WheelSize = !WheelSize;
+        EEPROM.put(5, WheelSize);
+        break;
+      case 4:
+        oldBrakeVal = brakeVal;
+        oldThrottleVal = throttleVal;
+        timer = millis() + LONG_PRESS;
+        M365Settings = false;
+        break;
+    } else if ((throttleVal == UNPRESSED) && (oldThrottleVal == UNPRESSED) && (brakeVal == FULL_PRESSED) && (oldBrakeVal != FULL_PRESSED)) {              // brake max + throttle min = change menu position
+    if (sMenuPos < 5)
+      sMenuPos++;
+    else
+      sMenuPos = 0;
+    timer = millis() + LONG_PRESS;
+  }
+
+  if (displayClear(7))
+    sMenuPos = 0;
+
+  display.set1X();
+
+  display.setCursor(0, 0);
+  display.print(" ");
+  display.print((const __FlashStringHelper *) M365CfgScr1);
+  display.print((const __FlashStringHelper *) ( cfgCruise ? l_On : l_Off ));
+
+  display.setCursor(0, 1);
+  display.print(" ");
+  display.print((const __FlashStringHelper *) M365CfgScr2);
+  display.print((const __FlashStringHelper *) (cfgTailight ? l_Yes : l_No));
+
+  display.setCursor(0, 2);
+  display.print(" ");
+  display.print((const __FlashStringHelper *) M365CfgScr3);
+  switch (cfgKERS) {
+    case 1:
+      display.print((const __FlashStringHelper *) l_Medium);
+      break;
+    case 2:
+      display.print((const __FlashStringHelper *) l_Strong);
+      break;
+    default:
+      display.print((const __FlashStringHelper *) l_Weak);
+      break;
+  }
+
+  display.setCursor(0, 3);
+  display.print(" ");
+  display.print((const __FlashStringHelper *) M365CfgScr4);
+  if (WheelSize) {
+    display.print((const __FlashStringHelper *) l_10inch);
+  } else {
+    display.print((const __FlashStringHelper *) l_85inch);
+  }
+  //display.setCursor(0, 4);
+
+  /*for (int i = 0; i < 25; i++) {
+    display.setCursor(i * 5, 6);
+    display.print('-');
+    }*/
+
+  display.setCursor(0, 4);
+  display.print(" ");
+  display.print((const __FlashStringHelper *) M365CfgScr5);
+
+  display.setCursor(0, sMenuPos);
+  display.print((char)0x7E);
+
+}
+
+void displaySettings() {
+  if ((brakeVal == FULL_PRESSED) && (oldBrakeVal == FULL_PRESSED) && (throttleVal == UNPRESSED) && (oldThrottleVal == UNPRESSED) && (timer != 0))
+    if (millis() > timer) {
+      Settings = false;
+      return;
+    }
+
+  if ((throttleVal == FULL_PRESSED) && (oldThrottleVal != FULL_PRESSED) && (brakeVal == UNPRESSED) && (oldBrakeVal == UNPRESSED))                // brake min + throttle max = change menu value
+    switch (menuPos) {
+      case 0:
+        autoBig = !autoBig;
+        break;
+      case 1:
+        bigMode = !bigMode;
+        break;
+      case 2:
+        if (warnBatteryPercent < 15) {
+          warnBatteryPercent += 5;
+        } else {
+          warnBatteryPercent = 0;
+        }
+        break;
+      case 3:
+        bigWarn = !bigWarn;
+        break;
+      case 4:
+        ShowBattInfo = true;
+        break;
+      case 5:
+        M365Settings = true;
+        break;
+      case 6:
+        EEPROM.put(1, autoBig);
+        EEPROM.put(2, warnBatteryPercent);
+        EEPROM.put(3, bigMode);
+        EEPROM.put(4, bigWarn);
+        Settings = false;
+        break;
+    } else if ((brakeVal == FULL_PRESSED) && (oldBrakeVal != FULL_PRESSED) && (throttleVal == UNPRESSED) && (oldThrottleVal == UNPRESSED)) {              // brake max + throttle min = change menu position
+      if (menuPos < 6)
+        menuPos++;
+      else
+        menuPos = 0;
+      timer = millis() + LONG_PRESS;
+    }
+
+  displayClear(2);
+  display.set1X();
+  
+  display.setCursor(0, 0);
+  display.print(" ");
+  display.print((const __FlashStringHelper *) confScr1);
+  display.print((const __FlashStringHelper *) (autoBig ? l_Yes : l_No));
+  display.print(" ");
+  
+  display.setCursor(0, 1);
+  display.print(" ");
+  display.print((const __FlashStringHelper *) confScr2);
+  display.print((const __FlashStringHelper *) (bigMode ? confScr2b : confScr2a));
+  display.print(" ");
+
+  display.setCursor(0, 2);
+  display.print(" ");
+  display.print((const __FlashStringHelper *) confScr3);
+  switch (warnBatteryPercent) {
+    case 5:
+      display.print(" 5%");
+      break;
+    case 10:
+      display.print("10%");
+      break;
+    case 15:
+      display.print("15%");
+      break;
+    default:
+      display.print((const __FlashStringHelper *) l_Off);
+      break;
+  }
+  display.print(" ");
+
+  display.setCursor(0, 3);
+  display.print(" ");
+  display.print((const __FlashStringHelper *) confScr4);
+  display.print((const __FlashStringHelper *) (bigWarn ? l_Yes : l_No));
+  display.print(" ");
+  
+  display.setCursor(0, 4);
+  display.print(" ");
+  display.print((const __FlashStringHelper *) confScr5);
+  display.print(" ");
+  
+  display.setCursor(0, 5);
+  display.print(" ");
+  display.print((const __FlashStringHelper *) confScr6);
+  display.print(" ");
+  
+  display.setCursor(0, 6);
+  for (uint8_t i = 0; i < 25; i++) {
+    display.setCursor(i * 5, 6);
+    display.print('-');
+  }
+  
+  display.setCursor(0, 7);
+  display.print(" ");
+  display.print((const __FlashStringHelper *) confScr7);
+  display.print(" ");
+  
+  display.setCursor(0, menuPos >= 6 ? 7 : menuPos);
+  display.print((char)0x7E);
 }
 
 void displayFSM() {
@@ -227,9 +438,6 @@ void displayFSM() {
     uint16_t temp;
   } m365_info;
 
-  int brakeVal = -1;
-  int throttleVal = -1;
-
   int tmp_0, tmp_1;
   long _speed;
   long c_speed; //current speed
@@ -237,20 +445,21 @@ void displayFSM() {
   if (S23CB0.speed < -10000) {// If speed if more than 32.767 km/h (32767)
     c_speed = S23CB0.speed + 32768 + 32767; // calculate speed over 32.767 (hex 0x8000 and above) add 32768 and 32767 to conver to unsigned int
   } else {
-    c_speed = abs(S23CB0.speed); }; //always + speed, even drive backwards ;)
+    c_speed = abs(S23CB0.speed);
+  }; //always + speed, even drive backwards ;)
   // 10 INCH WHEEL SIZE CALCULATE
   if (WheelSize) {
     _speed = (long) c_speed * 10 / 8.5; // 10" Whell
   } else {
     _speed = c_speed; //8,5" Whell
   };
- 
+
   m365_info.sph = (uint32_t) abs(_speed) / 1000L; // speed (GOOD)
   m365_info.spl = (uint16_t) c_speed % 1000 / 100;
-  #ifdef US_Version
-     m365_info.sph = m365_info.sph/1.609;
-     m365_info.spl = m365_info.spl/1.609;
-  #endif
+#ifdef US_Version
+  m365_info.sph = m365_info.sph / 1.609;
+  m365_info.spl = m365_info.spl / 1.609;
+#endif
   m365_info.curh = abs(S25C31.current) / 100;       //current
   m365_info.curl = abs(S25C31.current) % 100;
   m365_info.vh = abs(S25C31.voltage) / 100;         //voltage
@@ -264,399 +473,55 @@ void displayFSM() {
 
   if ((c_speed <= 200) || Settings) {
     if (S20C00HZ65.brake > 130)
-    brakeVal = 1;
-      else
-      if (S20C00HZ65.brake < 50)
-        brakeVal = -1;
-        else
-        brakeVal = 0;
+      brakeVal = FULL_PRESSED;
+    else if (S20C00HZ65.brake < 50)
+      brakeVal = UNPRESSED;
+    else
+      brakeVal = HALF_PRESSED;
     if (S20C00HZ65.throttle > 150)
-      throttleVal = 1;
-      else
-      if (S20C00HZ65.throttle < 50)
-        throttleVal = -1;
-        else
-        throttleVal = 0;
+      throttleVal = FULL_PRESSED;
+    else if (S20C00HZ65.throttle < 50)
+      throttleVal = UNPRESSED;
+    else
+      throttleVal = HALF_PRESSED;
 
-    if (((brakeVal == 1) && (throttleVal == 1) && !Settings) && ((oldBrakeVal != 1) || (oldThrottleVal != 1))) { // brake max + throttle max = menu on
+    if (((brakeVal == FULL_PRESSED) && (throttleVal == FULL_PRESSED) && !Settings) && ((oldBrakeVal != FULL_PRESSED) || (oldThrottleVal != FULL_PRESSED))) { // brake max + throttle max = menu on
       menuPos = 0;
       timer = millis() + LONG_PRESS;
       Settings = true;
     }
 
     if (M365Settings) {
-      if ((throttleVal == 1) && (oldThrottleVal != 1) && (brakeVal == -1) && (oldBrakeVal == -1))                // brake min + throttle max = change menu value
-      switch (sMenuPos) {
-        case 0:
-          cfgCruise = !cfgCruise;
-	  EEPROM.put(6, cfgCruise);
-          break;
-        case 1:
-          if (cfgCruise)
-            prepareCommand(CMD_CRUISE_ON);
-            else
-            prepareCommand(CMD_CRUISE_OFF);
-          break;
-        case 2:
-          cfgTailight = !cfgTailight;
-	  EEPROM.put(7, cfgTailight);
-          break;
-        case 3:
-          if (cfgTailight)
-            prepareCommand(CMD_LED_ON);
-            else
-            prepareCommand(CMD_LED_OFF);
-          break;
-        case 4:
-          switch (cfgKERS) {
-            case 1:
-              cfgKERS = 2;
-	      EEPROM.put(8, cfgKERS);
-              break;
-            case 2:
-              cfgKERS = 0;
-	      EEPROM.put(8, cfgKERS);
-              break;
-            default: 
-              cfgKERS = 1;
-	      EEPROM.put(8, cfgKERS);
-          }
-          break;
-        case 5:
-          switch (cfgKERS) { 
-            case 1:
-              prepareCommand(CMD_MEDIUM);
-              break;
-            case 2:
-              prepareCommand(CMD_STRONG);
-              break;
-            default: 
-              prepareCommand(CMD_WEAK);
-          }
-          break;
-        case 6:
-          WheelSize = !WheelSize;
-          EEPROM.put(5, WheelSize);
-	  break;
-        case 7:
-          oldBrakeVal = brakeVal;
-          oldThrottleVal = throttleVal;
-          timer = millis() + LONG_PRESS;
-          M365Settings = false;
-          break;
-      } else
-      if ((brakeVal == 1) && (oldBrakeVal != 1) && (throttleVal == -1) && (oldThrottleVal == -1)) {               // brake max + throttle min = change menu position
-        if (sMenuPos < 7)
-          sMenuPos++;
-          else
-          sMenuPos = 0;
-        timer = millis() + LONG_PRESS;
-      }
-
-      if (displayClear(7)) sMenuPos = 0;
-      display.set1X();
-      display.setCursor(0, 0);
-
-      if (sMenuPos == 0)
-        display.print((char)0x7E);
-        else
-        display.print(" ");
-
-      display.print((const __FlashStringHelper *) M365CfgScr1);
-      if (cfgCruise)
-        display.print((const __FlashStringHelper *) l_On);
-        else
-        display.print((const __FlashStringHelper *) l_Off);
-
-      display.setCursor(0, 1);
-
-      if (sMenuPos == 1)
-        display.print((char)0x7E);
-        else
-        display.print(" ");
-
-      display.print((const __FlashStringHelper *) M365CfgScr2);
-
-      display.setCursor(0, 2);
-
-      if (sMenuPos == 2)
-        display.print((char)0x7E);
-        else
-        display.print(" ");
-
-      display.print((const __FlashStringHelper *) M365CfgScr3);
-      if (cfgTailight)
-        display.print((const __FlashStringHelper *) l_Yes);
-        else
-        display.print((const __FlashStringHelper *) l_No);
-
-      display.setCursor(0, 3);
-
-      if (sMenuPos == 3)
-        display.print((char)0x7E);
-        else
-        display.print(" ");
-
-      display.print((const __FlashStringHelper *) M365CfgScr4);
-
-      display.setCursor(0, 4);
-
-      if (sMenuPos == 4)
-        display.print((char)0x7E);
-        else
-        display.print(" ");
-
-      display.print((const __FlashStringHelper *) M365CfgScr5);
-      switch (cfgKERS) {
-        case 1:
-          display.print((const __FlashStringHelper *) l_Medium);
-          break;
-        case 2:
-          display.print((const __FlashStringHelper *) l_Strong);
-          break;
-        default:
-          display.print((const __FlashStringHelper *) l_Weak);
-          break;
-      }
-
-    display.setCursor(0, 5);
-
-      if (sMenuPos == 5)
-        display.print((char)0x7E);
-        else
-        display.print(" ");
-
-      display.print((const __FlashStringHelper *) M365CfgScr6);
-
-    display.setCursor(0, 6);
-    
-    if (sMenuPos == 6)
-        display.print((char)0x7E);
-        else
-        display.print(" ");
-  
-      display.print((const __FlashStringHelper *) M365CfgScr7);
-       if(WheelSize) {
-          display.print((const __FlashStringHelper *) l_10inch);
-     }else{
-          display.print((const __FlashStringHelper *) l_85inch);
-      }  
-      //display.setCursor(0, 7);
-
-      /*for (int i = 0; i < 25; i++) {
-        display.setCursor(i * 5, 6);
-        display.print('-');
-      }*/
-
-      display.setCursor(0, 7);
-      
-      if (sMenuPos == 7)
-        display.print((char)0x7E);
-        else
-        display.print(" ");
-
-      display.print((const __FlashStringHelper *) M365CfgScr8);
+      displayM365Settings();
 
       oldBrakeVal = brakeVal;
       oldThrottleVal = throttleVal;
- 
+
       return;
-    } else
-    if (ShowBattInfo) {
-      if ((brakeVal == 1) && (oldBrakeVal != 1) && (throttleVal == -1) && (oldThrottleVal == -1)) {
-        oldBrakeVal = brakeVal;
-        oldThrottleVal = throttleVal;
+    } else if (ShowBattInfo) {
+      if ((brakeVal == FULL_PRESSED) && (oldBrakeVal != FULL_PRESSED) && (throttleVal == UNPRESSED) && (oldThrottleVal == -1)) {
         timer = millis() + LONG_PRESS;
         ShowBattInfo = false;
-        return;
+      } else {
+        fsBattInfo();
+
+        display.setCursor(0, 7);
+        display.print((const __FlashStringHelper *) battScr);
       }
-
-      fsBattInfo();
-
-      display.setCursor(0, 7);
-      display.print((const __FlashStringHelper *) battScr);
 
       oldBrakeVal = brakeVal;
       oldThrottleVal = throttleVal;
- 
+
       return;
-    } else
-    if (Settings) {
-      if ((brakeVal == 1) && (oldBrakeVal == 1) && (throttleVal == -1) && (oldThrottleVal == -1) && (timer != 0))
-        if (millis() > timer) {
-          Settings = false;
-          return;
-        }
+    } else if (Settings) {
 
-      if ((throttleVal == 1) && (oldThrottleVal != 1) && (brakeVal == -1) && (oldBrakeVal == -1))                // brake min + throttle max = change menu value
-      switch (menuPos) {
-        case 0:
-          autoBig = !autoBig;
-          break;
-        case 1:
-          switch (bigMode) {
-            case 0:
-              bigMode = 1;
-              break;
-            default:
-              bigMode = 0;
-          }
-          break;
-        case 2:
-          switch (warnBatteryPercent) {
-            case 0:
-              warnBatteryPercent = 5;
-              break;
-            case 5:
-              warnBatteryPercent = 10;
-              break;
-            case 10:
-              warnBatteryPercent = 15;
-              break;
-            default:
-              warnBatteryPercent = 0;
-          }
-          break;
-        case 3:
-          bigWarn = !bigWarn;
-          break;
-        case 4:
-          ShowBattInfo = true;
-          break;
-        case 5:
-          M365Settings = true;
-          break;
-        case 6:
-          EEPROM.put(1, autoBig);
-          EEPROM.put(2, warnBatteryPercent);
-          EEPROM.put(3, bigMode);
-          EEPROM.put(4, bigWarn);
-          Settings = false;
-          break;
-      } else
-      if ((brakeVal == 1) && (oldBrakeVal != 1) && (throttleVal == -1) && (oldThrottleVal == -1)) {               // brake max + throttle min = change menu position
-        if (menuPos < 6)
-          menuPos++;
-          else
-          menuPos = 0;
-        timer = millis() + LONG_PRESS;
-      }
-
-      displayClear(2);
-
-      display.set1X();
-      display.setCursor(0, 0);
-
-      if (menuPos == 0)
-        display.print((char)0x7E);
-        else
-        display.print(" ");
-
-      display.print((const __FlashStringHelper *) confScr1);
-      if (autoBig)
-        display.print((const __FlashStringHelper *) l_Yes);
-        else
-        display.print((const __FlashStringHelper *) l_No);
-
-      display.setCursor(0, 1);
-
-      if (menuPos == 1)
-        display.print((char)0x7E);
-        else
-        display.print(" ");
-
-      display.print((const __FlashStringHelper *) confScr2);
-      switch (bigMode) {
-        case 1:
-          display.print((const __FlashStringHelper *) confScr2b);
-          break;
-        default:
-          display.print((const __FlashStringHelper *) confScr2a);
-      }
-
-      display.setCursor(0, 2);
-
-      if (menuPos == 2)
-        display.print((char)0x7E);
-        else
-        display.print(" ");
-
-      display.print((const __FlashStringHelper *) confScr3);
-      switch (warnBatteryPercent) {
-        case 5:
-          display.print(" 5%");
-          break;
-        case 10:
-          display.print("10%");
-          break;
-        case 15:
-          display.print("15%");
-          break;
-        default:
-          display.print((const __FlashStringHelper *) l_Off);
-          break;
-      }
-
-      display.setCursor(0, 3);
-
-      if (menuPos == 3)
-        display.print((char)0x7E);
-        else
-        display.print(" ");
-
-      display.print((const __FlashStringHelper *) confScr4);
-      if (bigWarn)
-        display.print((const __FlashStringHelper *) l_Yes);
-        else
-        display.print((const __FlashStringHelper *) l_No);
-
-      display.setCursor(0, 4);
-
-      if (menuPos == 4)
-        display.print((char)0x7E);
-        else
-        display.print(" ");
-
-      display.print((const __FlashStringHelper *) confScr5);
-
-      display.setCursor(0, 5);
-
-      if (menuPos == 5)
-        display.print((char)0x7E);
-        else
-        display.print(" ");
-
-      display.print((const __FlashStringHelper *) confScr6);
-
-      display.setCursor(0, 6);
-
-      for (uint8_t i = 0; i < 25; i++) {
-        display.setCursor(i * 5, 6);
-        display.print('-');
-      }
-
-      display.setCursor(0, 7);
-
-      if (menuPos == 6)
-        display.print((char)0x7E);
-        else
-        display.print(" ");
-
-      display.print((const __FlashStringHelper *) confScr7);
-
-      display.setCursor(0, 8);
-
-      if (menuPos == 7)
-        display.print((char)0x7E);
-      else
-        display.print(" ");
+      displaySettings();
 
       oldBrakeVal = brakeVal;
       oldThrottleVal = throttleVal;
- 
+
       return;
-    } else
-    if ((throttleVal == 1) && (oldThrottleVal != 1) && (brakeVal == -1) && (oldBrakeVal == -1)) {
+    } else if ((throttleVal == FULL_PRESSED) && (oldThrottleVal != FULL_PRESSED) && (brakeVal == UNPRESSED) && (oldBrakeVal == UNPRESSED)) {
       displayClear(3);
 
       display.set1X();
@@ -685,7 +550,7 @@ void displayFSM() {
       display.setCursor(15, 6);
       tmp_0 = S23C3A.powerOnTime / 60;
       tmp_1 = S23C3A.powerOnTime % 60;
-      if (tmp_0 < 100) display.print(' '); 
+      if (tmp_0 < 100) display.print(' ');
       if (tmp_0 < 10) display.print(' ');
       display.print(tmp_0);
       display.print(':');
@@ -706,130 +571,129 @@ void displayFSM() {
       display.print((char)0x21);
       display.setFont(defaultFont);
     }
-  } else
-    if ((m365_info.sph > 1) && (autoBig)) {
-      displayClear(5);
-      display.set1X();
+  } else if ((m365_info.sph > 1) && (autoBig)) {
+    displayClear(5);
+    display.set1X();
 
-      switch (bigMode) {
-        case 1:
-          display.setFont(bigNumb);
-          tmp_0 = m365_info.curh / 10;
-          tmp_1 = m365_info.curh % 10;
-          display.setCursor(2, 0);
-          if (tmp_0 > 0)
-            display.print(tmp_0);
-            else
-            display.print((char)0x3B);
-          display.setCursor(32, 0);
-          display.print(tmp_1);
-          tmp_0 = m365_info.curl / 10;
-          tmp_1 = m365_info.curl % 10;
-          display.setCursor(75, 0);
+    switch (bigMode) {
+      case 1:
+        display.setFont(bigNumb);
+        tmp_0 = m365_info.curh / 10;
+        tmp_1 = m365_info.curh % 10;
+        display.setCursor(2, 0);
+        if (tmp_0 > 0)
           display.print(tmp_0);
-          display.setCursor(108, 0);
-          display.setFont(stdNumb);
-          display.print(tmp_1);
-          display.setFont(defaultFont);
-          if ((S25C31.current >= 0) || ((S25C31.current < 0) && (millis() % 1000 < 500))) {
-            display.set2X();
-            display.setCursor(108, 4);
-            display.print((const __FlashStringHelper *) l_a);
-          }
-          display.set1X();
-          display.setCursor(64, 5);
-          display.print((char)0x85);
-          break;
-        default:
-          display.setFont(bigNumb);
-          tmp_0 = m365_info.sph / 10;
-          tmp_1 = m365_info.sph % 10;
-          display.setCursor(2, 0);
-          if (tmp_0 > 0)
-            display.print(tmp_0);
-            else
-            display.print((char)0x3B);
-          display.setCursor(32, 0);
-          display.print(tmp_1);
-          display.setCursor(75, 0);
-          display.print(m365_info.spl);
-          display.setCursor(106, 0);
-          display.print((char)0x3A);
-          display.setFont(defaultFont);
-          display.set1X();
-          display.setCursor(64, 5);
-          display.print((char)0x85);
-      }
-      showBatt(S25C31.remainPercent, S25C31.current < 0);
-    } else {
-      if ((S25C31.current < -100) && (c_speed <= 200)) {
-        fsBattInfo();
-      } else {
-        displayClear(0);
-
-        m365_info.milh = S23CB0.mileageCurrent / 100;   //mileage
-        m365_info.mill = S23CB0.mileageCurrent % 100;
-        m365_info.Min = S23C3A.ridingTime / 60;         //riding time
-        m365_info.Sec = S23C3A.ridingTime % 60;
-        m365_info.temp = S23CB0.mainframeTemp / 10;     //temperature
-	#ifdef US_Version
-          m365_info.milh = m365_info.milh/1.609;
-          m365_info.mill = m365_info.mill/1.609;
-          m365_info.temp = m365_info.temp*9/5+32;
-  #endif
+        else
+          display.print((char)0x3B);
+        display.setCursor(32, 0);
+        display.print(tmp_1);
+        tmp_0 = m365_info.curl / 10;
+        tmp_1 = m365_info.curl % 10;
+        display.setCursor(75, 0);
+        display.print(tmp_0);
+        display.setCursor(108, 0);
+        display.setFont(stdNumb);
+        display.print(tmp_1);
+        display.setFont(defaultFont);
+        if ((S25C31.current >= 0) || ((S25C31.current < 0) && (millis() % 1000 < 500))) {
+          display.set2X();
+          display.setCursor(108, 4);
+          display.print((const __FlashStringHelper *) l_a);
+        }
         display.set1X();
-        display.setFont(stdNumb);
-        display.setCursor(0, 0);
-
-        if (m365_info.sph < 10) display.print(' ');
-        display.print(m365_info.sph);
-        display.print('.');
+        display.setCursor(64, 5);
+        display.print((char)0x85);
+        break;
+      default:
+        display.setFont(bigNumb);
+        tmp_0 = m365_info.sph / 10;
+        tmp_1 = m365_info.sph % 10;
+        display.setCursor(2, 0);
+        if (tmp_0 > 0)
+          display.print(tmp_0);
+        else
+          display.print((char)0x3B);
+        display.setCursor(32, 0);
+        display.print(tmp_1);
+        display.setCursor(75, 0);
         display.print(m365_info.spl);
+        display.setCursor(106, 0);
+        display.print((char)0x3A);
         display.setFont(defaultFont);
-        display.print((const __FlashStringHelper *) l_kmh);
-        display.setFont(stdNumb);
-
-        display.setCursor(95, 0);
-
-        if (m365_info.temp < 10) display.print(' ');
-        display.print(m365_info.temp);
-        display.setFont(defaultFont);
-        display.print((char)0x80);
-        display.print((const __FlashStringHelper *) l_c);
-        display.setFont(stdNumb);
-
-        display.setCursor(0, 2);
-
-        if (m365_info.milh < 10) display.print(' ');
-        display.print(m365_info.milh);
-        display.print('.');
-        if (m365_info.mill < 10) display.print('0');
-        display.print(m365_info.mill);
-        display.setFont(defaultFont);
-        display.print((const __FlashStringHelper *) l_km);
-        display.setFont(stdNumb);
-
-        display.setCursor(0, 4);
-
-        if (m365_info.Min < 10) display.print('0');
-        display.print(m365_info.Min);
-        display.print(':');
-        if (m365_info.Sec < 10) display.print('0');
-        display.print(m365_info.Sec);
-
-        display.setCursor(68, 4);
-
-        if (m365_info.curh < 10) display.print(' ');
-        display.print(m365_info.curh);
-        display.print('.');
-        if (m365_info.curl < 10) display.print('0');
-        display.print(m365_info.curl);
-        display.setFont(defaultFont);
-        display.print((const __FlashStringHelper *) l_a);
-      }
-
-      showBatt(S25C31.remainPercent, S25C31.current < 0);
+        display.set1X();
+        display.setCursor(64, 5);
+        display.print((char)0x85);
     }
+    showBatt(S25C31.remainPercent, S25C31.current < 0);
+  } else {
+    if ((S25C31.current < -100) && (c_speed <= 200)) {
+      fsBattInfo();
+    } else {
+      displayClear(0);
+
+      m365_info.milh = S23CB0.mileageCurrent / 100;   //mileage
+      m365_info.mill = S23CB0.mileageCurrent % 100;
+      m365_info.Min = S23C3A.ridingTime / 60;         //riding time
+      m365_info.Sec = S23C3A.ridingTime % 60;
+      m365_info.temp = S23CB0.mainframeTemp / 10;     //temperature
+#ifdef US_Version
+      m365_info.milh = m365_info.milh / 1.609;
+      m365_info.mill = m365_info.mill / 1.609;
+      m365_info.temp = m365_info.temp * 9 / 5 + 32;
+#endif
+      display.set1X();
+      display.setFont(stdNumb);
+      display.setCursor(0, 0);
+
+      if (m365_info.sph < 10) display.print(' ');
+      display.print(m365_info.sph);
+      display.print('.');
+      display.print(m365_info.spl);
+      display.setFont(defaultFont);
+      display.print((const __FlashStringHelper *) l_kmh);
+      display.setFont(stdNumb);
+
+      display.setCursor(95, 0);
+
+      if (m365_info.temp < 10) display.print(' ');
+      display.print(m365_info.temp);
+      display.setFont(defaultFont);
+      display.print((char)0x80);
+      display.print((const __FlashStringHelper *) l_c);
+      display.setFont(stdNumb);
+
+      display.setCursor(0, 2);
+
+      if (m365_info.milh < 10) display.print(' ');
+      display.print(m365_info.milh);
+      display.print('.');
+      if (m365_info.mill < 10) display.print('0');
+      display.print(m365_info.mill);
+      display.setFont(defaultFont);
+      display.print((const __FlashStringHelper *) l_km);
+      display.setFont(stdNumb);
+
+      display.setCursor(0, 4);
+
+      if (m365_info.Min < 10) display.print('0');
+      display.print(m365_info.Min);
+      display.print(':');
+      if (m365_info.Sec < 10) display.print('0');
+      display.print(m365_info.Sec);
+
+      display.setCursor(68, 4);
+
+      if (m365_info.curh < 10) display.print(' ');
+      display.print(m365_info.curh);
+      display.print('.');
+      if (m365_info.curl < 10) display.print('0');
+      display.print(m365_info.curl);
+      display.setFont(defaultFont);
+      display.print((const __FlashStringHelper *) l_a);
+    }
+
+    showBatt(S25C31.remainPercent, S25C31.current < 0);
+  }
 }
 
 // -----------------------------------------------------------------------------------------------------------
@@ -882,7 +746,7 @@ void dataFSM() {
         }
         if (readCounter > sizeof(AnswerHeader)) {     //now begin read data
           *bufPtr++ = bt;
-          if(readCounter < (AnswerHeader.len + 3)) _cs -= bt;
+          if (readCounter < (AnswerHeader.len + 3)) _cs -= bt;
         }
         beginMillis = millis();                     //reset timeout
       }
@@ -890,9 +754,9 @@ void dataFSM() {
       if (AnswerHeader.len == (readCounter - 4)) {    //if len in header == current received len
         uint16_t cs;
         uint16_t* ipcs;
-        ipcs = (uint16_t*)(bufPtr-2);
+        ipcs = (uint16_t*)(bufPtr - 2);
         cs = *ipcs;
-        if(cs != _cs) {   //check cs
+        if (cs != _cs) {  //check cs
           step = 2;
           break;
         }
@@ -956,14 +820,14 @@ void processPacket(uint8_t* data, uint8_t len) {
     case 0x21:
       switch (AnswerHeader.cmd) {
         case 0x00:
-        switch(AnswerHeader.hz) {
-          case 0x64: //answer to BLE
-            memcpy((void*)& S21C00HZ64, (void*)data, RawDataLen);
-            break;
+          switch (AnswerHeader.hz) {
+            case 0x64: //answer to BLE
+              memcpy((void*)& S21C00HZ64, (void*)data, RawDataLen);
+              break;
           }
           break;
-      default:
-        break;
+        default:
+          break;
       }
       break;
     case 0x22:
@@ -1011,11 +875,11 @@ void processPacket(uint8_t* data, uint8_t len) {
         default:
           break;
       }
-      break;          
+      break;
     case 0x25:
       switch (AnswerHeader.cmd) {
         case 0x40: //cells info
-          if(RawDataLen == sizeof(A25C40)) memcpy((void*)& S25C40, (void*)data, RawDataLen);
+          if (RawDataLen == sizeof(A25C40)) memcpy((void*)& S25C40, (void*)data, RawDataLen);
           break;
         case 0x3B:
           break;
@@ -1030,10 +894,10 @@ void processPacket(uint8_t* data, uint8_t len) {
           break;
         default:
           break;
-        }
-        break;
-      default:
-        break;
+      }
+      break;
+    default:
+      break;
   }
 
   for (uint8_t i = 0; i < sizeof(_commandsWeWillSend); i++)
@@ -1079,7 +943,7 @@ uint8_t preloadQueryFromTable(unsigned char index) {
   ph = NULL;
   pe = NULL;
 
-  switch(cmdFormat) {
+  switch (cmdFormat) {
     case 1: //h1 only
       ph = (uint8_t*)&_h1;
       hLen = sizeof(_h1);
@@ -1105,19 +969,19 @@ uint8_t preloadQueryFromTable(unsigned char index) {
 
   memcpy_P((void*)ptrBuf, (void*)ph, hLen);         //copy header
   ptrBuf += hLen;
-  
+
   memcpy_P((void*)ptrBuf, (void*)(_q + index), 1);  //copy query
   ptrBuf++;
-  
+
   memcpy_P((void*)ptrBuf, (void*)(_l + index), 1);  //copy expected answer length
   ptrBuf++;
 
   if (pe != NULL) {
     memcpy((void*)ptrBuf, (void*)pe, eLen);       //if needed - copy ender
-    ptrBuf+= hLen;
+    ptrBuf += hLen;
   }
 
-  //unsigned char 
+  //unsigned char
   _Query.DataLen = ptrBuf - (uint8_t*)&_Query.buf[2]; //calculate length of data in buf, w\o preamble and cs
   _Query.cs = calcCs((uint8_t*)&_Query.buf[2], _Query.DataLen);    //calculate cs of buffer
 
@@ -1131,7 +995,7 @@ void prepareCommand(uint8_t cmd) {
   _cmd.addr = 0x20;
   _cmd.rlen = 0x03;
 
-  switch(cmd){
+  switch (cmd) {
     case CMD_CRUISE_ON:   //0x7C, 0x01, 0x00
       _cmd.param = 0x7C;
       _cmd.value =    1;
@@ -1141,7 +1005,7 @@ void prepareCommand(uint8_t cmd) {
       _cmd.value =    0;
       break;
     case CMD_LED_ON:      //0x7D, 0x02, 0x00
-      _cmd.param = 0x7D;  
+      _cmd.param = 0x7D;
       _cmd.value =    2;
       break;
     case CMD_LED_OFF:     //0x7D, 0x00, 0x00
@@ -1172,7 +1036,7 @@ void prepareCommand(uint8_t cmd) {
   memcpy((void*)ptrBuf, (void*)&_cmd, sizeof(_cmd)); //copy command body
   ptrBuf += sizeof(_cmd);
 
-  //unsigned char 
+  //unsigned char
   _Query.DataLen = ptrBuf - (uint8_t*)&_Query.buf[2];               //calculate length of data in buf, w\o preamble and cs
   _Query.cs = calcCs((uint8_t*)&_Query.buf[2], _Query.DataLen);     //calculate cs of buffer
 

@@ -31,13 +31,11 @@
   const char battScr[] PROGMEM = {">>> Brake to exit <<<"};
 
   const char M365CfgScr1[] PROGMEM = {"Cruise control: "};
-  const char M365CfgScr2[] PROGMEM = {"Update Cruise"};
-  const char M365CfgScr3[] PROGMEM = {"Tailight on:    "};
-  const char M365CfgScr4[] PROGMEM = {"Update Tailight"};
-  const char M365CfgScr5[] PROGMEM = {"KERS:        "};
-  const char M365CfgScr6[] PROGMEM = {"Update KERS"};
-  const char M365CfgScr8[] PROGMEM = {"Exit"};
-  const char M365CfgScr7[] PROGMEM = {"Wheel Size:     "};
+  const char M365CfgScr2[] PROGMEM = {"Tailight on:    "};
+  const char M365CfgScr3[] PROGMEM = {"KERS:        "};
+  const char M365CfgScr4[] PROGMEM = {"Wheel Size:     "};
+  const char M365CfgScr5[] PROGMEM = {"Exit"};
+
 
   const char l_85inch[] PROGMEM = {" 8,5\""};
   const char l_10inch[] PROGMEM = {"  10\""};

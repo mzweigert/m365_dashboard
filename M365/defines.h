@@ -1,8 +1,8 @@
 #include "WatchDog.h"
 
 // Select either SPI or I2C(Wire) Display Mode
-#define DISPLAY_SPI
-//#define DISPLAY_I2C
+//#define DISPLAY_SPI
+#define DISPLAY_I2C
 
 //#define US_Version
 
@@ -20,7 +20,7 @@
   #include "SSD1306AsciiWire.h"
 #endif
 #include "fonts/m365.h"
-#if Language == RU
+#ifdef LANG_RU
   #include "fonts/System5x7ru.h"
 #else
   #include "fonts/System5x7mod.h"
@@ -39,10 +39,10 @@ const uint16_t LONG_PRESS = 2000;
 uint8_t warnBatteryPercent = 5;
 
 bool autoBig = true;
-uint8_t bigMode = 0;
+bool bigMode = true;
 bool bigWarn = true;
 
-bool Settings = false;
+bool Settings = true;
 bool ShowBattInfo = false;
 bool M365Settings = false;
 
@@ -51,10 +51,16 @@ uint8_t sMenuPos = 0;
 
 bool cfgCruise = false;
 bool cfgTailight = false;
-uint8_t cfgKERS = 0;
+short int cfgKERS = 0;
 
-volatile uint8_t oldBrakeVal = -1;
-volatile uint8_t oldThrottleVal = -1;
+enum pressed_status {UNPRESSED, HALF_PRESSED, FULL_PRESSED};
+
+pressed_status brakeVal = UNPRESSED;
+pressed_status oldBrakeVal = UNPRESSED;
+
+pressed_status throttleVal = UNPRESSED;
+pressed_status oldThrottleVal = UNPRESSED;
+
 volatile bool btnPressed = false;
 bool bAlarm = false;
 
