@@ -10,7 +10,7 @@
 #ifdef DISPLAY_SPI
   #include <SPI.h>
   #include "SSD1306AsciiSpi.h"
-  #define PIN_CS  10
+  #define PIN_CS ; 10
   #define PIN_RST 9
   #define PIN_DC  8
   #define PIN_D0 13
@@ -42,7 +42,8 @@ bool autoBig = true;
 bool bigMode = true;
 bool bigWarn = true;
 
-bool Settings = true;
+bool menuDrawn = false;
+bool Settings = false;
 bool ShowBattInfo = false;
 bool M365Settings = false;
 

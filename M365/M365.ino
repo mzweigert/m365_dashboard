@@ -56,6 +56,7 @@ void setup() {
   displayClear(0, true);
   display.setCursor(0, 0);
   display.print((char)0x20);
+
   display.setFont(defaultFont);
 
   uint32_t wait = millis() + 2000;
@@ -212,7 +213,7 @@ void fsBattInfo() {
 }
 
 void displayM365Settings() {
-  if ((throttleVal == FULL_PRESSED) && (oldThrottleVal != FULL_PRESSED) && (brakeVal == UNPRESSED) && (oldBrakeVal == UNPRESSED))                // brake min + throttle max = change menu value
+  if ((throttleVal == FULL_PRESSED) && (oldThrottleVal != FULL_PRESSED) && (brakeVal == UNPRESSED) && (oldBrakeVal == UNPRESSED)) {              // brake min + throttle max = change menu value
     switch (sMenuPos) {
       case 0:
         cfgCruise = !cfgCruise;
@@ -250,18 +251,21 @@ void displayM365Settings() {
         timer = millis() + LONG_PRESS;
         M365Settings = false;
         break;
-    } else if ((throttleVal == UNPRESSED) && (oldThrottleVal == UNPRESSED) && (brakeVal == FULL_PRESSED) && (oldBrakeVal != FULL_PRESSED)) {              // brake max + throttle min = change menu position
-    if (sMenuPos < 5)
+    }
+    menuDrawn = false;
+  } else if ((throttleVal == UNPRESSED) && (oldThrottleVal == UNPRESSED) && (brakeVal == FULL_PRESSED) && (oldBrakeVal != FULL_PRESSED)) {              // brake max + throttle min = change menu position
+    if (sMenuPos < 4)
       sMenuPos++;
     else
       sMenuPos = 0;
     timer = millis() + LONG_PRESS;
-  }
+    menuDrawn = false;
+  } else if (menuDrawn) return;
 
+  if(!M365Settings) return;
+  
   if (displayClear(7))
     sMenuPos = 0;
-
-  display.set1X();
 
   display.setCursor(0, 0);
   display.print(" ");
@@ -296,30 +300,32 @@ void displayM365Settings() {
   } else {
     display.print((const __FlashStringHelper *) l_85inch);
   }
-  //display.setCursor(0, 4);
 
-  /*for (int i = 0; i < 25; i++) {
+
+  display.setCursor(0, 6);
+  for (int i = 0; i < 25; i++) {
     display.setCursor(i * 5, 6);
     display.print('-');
-    }*/
+  }
 
-  display.setCursor(0, 4);
+  display.setCursor(0, 7);
   display.print(" ");
   display.print((const __FlashStringHelper *) M365CfgScr5);
 
-  display.setCursor(0, sMenuPos);
+  display.setCursor(0, sMenuPos == 4 ? 7 : sMenuPos);
   display.print((char)0x7E);
-
+  menuDrawn = true;
 }
 
 void displaySettings() {
+
   if ((brakeVal == FULL_PRESSED) && (oldBrakeVal == FULL_PRESSED) && (throttleVal == UNPRESSED) && (oldThrottleVal == UNPRESSED) && (timer != 0))
     if (millis() > timer) {
       Settings = false;
       return;
     }
 
-  if ((throttleVal == FULL_PRESSED) && (oldThrottleVal != FULL_PRESSED) && (brakeVal == UNPRESSED) && (oldBrakeVal == UNPRESSED))                // brake min + throttle max = change menu value
+  if ((throttleVal == FULL_PRESSED) && (oldThrottleVal != FULL_PRESSED) && (brakeVal == UNPRESSED) && (oldBrakeVal == UNPRESSED)) {              // brake min + throttle max = change menu value
     switch (menuPos) {
       case 0:
         autoBig = !autoBig;
@@ -350,23 +356,28 @@ void displaySettings() {
         EEPROM.put(4, bigWarn);
         Settings = false;
         break;
-    } else if ((brakeVal == FULL_PRESSED) && (oldBrakeVal != FULL_PRESSED) && (throttleVal == UNPRESSED) && (oldThrottleVal == UNPRESSED)) {              // brake max + throttle min = change menu position
-      if (menuPos < 6)
-        menuPos++;
-      else
-        menuPos = 0;
-      timer = millis() + LONG_PRESS;
     }
+    menuDrawn = false;
+  } else if ((brakeVal == FULL_PRESSED) && (oldBrakeVal != FULL_PRESSED) && (throttleVal == UNPRESSED) && (oldThrottleVal == UNPRESSED)) {              // brake max + throttle min = change menu position
+    if (menuPos < 6)
+      menuPos++;
+    else
+      menuPos = 0;
+    timer = millis() + LONG_PRESS;
+    menuDrawn = false;
+  } else if (menuDrawn) return;
+
+  if (M365Settings) return;
 
   displayClear(2);
   display.set1X();
-  
+
   display.setCursor(0, 0);
   display.print(" ");
   display.print((const __FlashStringHelper *) confScr1);
   display.print((const __FlashStringHelper *) (autoBig ? l_Yes : l_No));
   display.print(" ");
-  
+
   display.setCursor(0, 1);
   display.print(" ");
   display.print((const __FlashStringHelper *) confScr2);
@@ -397,30 +408,31 @@ void displaySettings() {
   display.print((const __FlashStringHelper *) confScr4);
   display.print((const __FlashStringHelper *) (bigWarn ? l_Yes : l_No));
   display.print(" ");
-  
+
   display.setCursor(0, 4);
   display.print(" ");
   display.print((const __FlashStringHelper *) confScr5);
   display.print(" ");
-  
+
   display.setCursor(0, 5);
   display.print(" ");
   display.print((const __FlashStringHelper *) confScr6);
   display.print(" ");
-  
+
   display.setCursor(0, 6);
   for (uint8_t i = 0; i < 25; i++) {
     display.setCursor(i * 5, 6);
     display.print('-');
   }
-  
+
   display.setCursor(0, 7);
   display.print(" ");
   display.print((const __FlashStringHelper *) confScr7);
   display.print(" ");
-  
-  display.setCursor(0, menuPos >= 6 ? 7 : menuPos);
+
+  display.setCursor(0, menuPos == 6 ? 7 : menuPos);
   display.print((char)0x7E);
+  menuDrawn = true;
 }
 
 void displayFSM() {
@@ -489,6 +501,7 @@ void displayFSM() {
       menuPos = 0;
       timer = millis() + LONG_PRESS;
       Settings = true;
+      menuDrawn = false;
     }
 
     if (M365Settings) {
